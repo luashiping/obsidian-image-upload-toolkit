@@ -7,6 +7,7 @@ import ImagekitUploader from "./imagekit/imagekitUploader";
 import AwsS3Uploader from "./s3/awsS3Uploader";
 import CosUploader from "./cos/cosUploader";
 import KodoUploader from "./qiniu/kodoUploader";
+import R2Uploader from "./r2/r2Uploader";
 
 export default function buildUploader(settings: PublishSettings): ImageUploader {
     switch (settings.imageStore) {
@@ -22,6 +23,8 @@ export default function buildUploader(settings: PublishSettings): ImageUploader 
             return new CosUploader(settings.cosSetting);
         case ImageStore.QINIU_KUDO.id:
             return new KodoUploader(settings.kodoSetting);
+        case ImageStore.CLOUDFLARE_R2.id:
+            return new R2Uploader(settings.r2Setting);
         //todo more cases
         default:
             throw new Error('should not reach here!')

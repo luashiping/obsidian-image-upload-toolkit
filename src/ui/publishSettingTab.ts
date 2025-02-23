@@ -3,6 +3,7 @@ import ObsidianPublish from "../publish";
 import ImageStore from "../imageStore";
 import {AliYunRegionList} from "../uploader/oss/common";
 import {TencentCloudRegionList} from "../uploader/cos/common";
+import {join} from 'path';
 
 export default class PublishSettingTab extends PluginSettingTab {
     private plugin: ObsidianPublish;
@@ -21,21 +22,48 @@ export default class PublishSettingTab extends PluginSettingTab {
         const imageStoreTypeDiv = containerEl.createDiv();
         this.imageStoreDiv = containerEl.createDiv();
 
-        // Attachment location
+        // Add the new toggle for relative path
+        new Setting(imageStoreTypeDiv)
+            .setName("Use Relative Path")
+            .setDesc("When enabled, the attachment location will be relative to the current note. When disabled, it will be relative to the vault root.")
+            .addToggle(toggle =>
+                toggle
+                    .setValue(this.plugin.settings.useRelativePath)
+                    .onChange(async (value) => {
+                        this.plugin.settings.useRelativePath = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
+
+        // Attachment location setting
         new Setting(imageStoreTypeDiv)
             .setName("Attachment location")
-            .setDesc("The location storing images which will upload images from.")
+            .setDesc("The location storing images which will upload images from. Use './media' for relative path when 'Use Relative Path' is enabled.")
             .addText(text =>
                 text
                     .setPlaceholder("Enter folder name")
                     .setValue(this.plugin.settings.attachmentLocation)
                     .onChange(async (value) => {
-                        if ((await this.app.vault.getAbstractFileByPath(value)) == null) {
-                            new Notice(`Attachment location "${value}" not exist!`)
-                            return
+                        const activeFile = this.app.workspace.getActiveFile();
+                        if (!activeFile) {
+                            new Notice("No active file to check relative path");
+                            return;
                         }
-                        this.plugin.settings.attachmentLocation = value;
 
+                        let pathToCheck = value;
+                        if (this.plugin.settings.useRelativePath) {
+                            // If using relative path, check relative to current note
+                            const notePath = activeFile.parent?.path || "";
+                            pathToCheck = join(notePath, value.replace(/^\.\//, ''));
+                        }
+
+                        if ((await this.app.vault.getAbstractFileByPath(pathToCheck)) == null) {
+                            new Notice(`Attachment location "${pathToCheck}" not exist!`);
+                            return;
+                        }
+                        
+                        this.plugin.settings.attachmentLocation = value;
+                        await this.plugin.saveSettings();
                     })
             );
 
@@ -110,6 +138,9 @@ export default class PublishSettingTab extends PluginSettingTab {
             case ImageStore.QINIU_KUDO.id:
                 this.drawQiniuSetting(parentEL);
                 break
+            case ImageStore.CLOUDFLARE_R2.id:
+                this.drawR2Setting(parentEL);
+                break;
             default:
                 throw new Error(
                     "Should not reach here!"
@@ -405,5 +436,57 @@ export default class PublishSettingTab extends PluginSettingTab {
                     .setPlaceholder("Enter path")
                     .setValue(this.plugin.settings.kodoSetting.customDomainName)
                     .onChange(value => this.plugin.settings.kodoSetting.customDomainName = value))
+    }
+
+    private drawR2Setting(parentEL: HTMLDivElement) {
+        new Setting(parentEL)
+            .setName('Cloudflare Account ID')
+            .setDesc('Your Cloudflare account ID')
+            .addText(text => text
+                .setPlaceholder('Enter your account ID')
+                .setValue(this.plugin.settings.r2Setting?.accountId || '')
+                .onChange(value => this.plugin.settings.r2Setting.accountId = value));
+
+        new Setting(parentEL)
+            .setName('R2 Access Key ID')
+            .setDesc('Your R2 access key ID')
+            .addText(text => text
+                .setPlaceholder('Enter your access key ID')
+                .setValue(this.plugin.settings.r2Setting?.accessKeyId || '')
+                .onChange(value => this.plugin.settings.r2Setting.accessKeyId = value));
+
+        new Setting(parentEL)
+            .setName('R2 Secret Access Key')
+            .setDesc('Your R2 secret access key')
+            .addText(text => text
+                .setPlaceholder('Enter your secret access key')
+                .setValue(this.plugin.settings.r2Setting?.secretAccessKey || '')
+                .onChange(value => this.plugin.settings.r2Setting.secretAccessKey = value));
+
+        new Setting(parentEL)
+            .setName('R2 Bucket Name')
+            .setDesc('Your R2 bucket name')
+            .addText(text => text
+                .setPlaceholder('Enter your bucket name')
+                .setValue(this.plugin.settings.r2Setting?.bucketName || '')
+                .onChange(value => this.plugin.settings.r2Setting.bucketName = value));
+
+        new Setting(parentEL)
+            .setName("Target Path")
+            .setDesc("The path to store image.\nSupport {year} {mon} {day} {random} {filename} vars. For example, /{year}/{mon}/{day}/{filename} with uploading pic.jpg, it will store as /2023/06/08/pic.jpg.")
+            .addText(text =>
+                text
+                    .setPlaceholder("Enter path")
+                    .setValue(this.plugin.settings.r2Setting.path)
+                    .onChange(value => this.plugin.settings.r2Setting.path = value));
+
+        new Setting(parentEL)
+            .setName("Custom Domain Name")
+            .setDesc("If the custom domain name is example.com, you can use https://example.com/pic.jpg to access pic.jpg.")
+            .addText(text =>
+                text
+                    .setPlaceholder("Enter domain")
+                    .setValue(this.plugin.settings.r2Setting.customDomainName)
+                    .onChange(value => this.plugin.settings.r2Setting.customDomainName = value));
     }
 }

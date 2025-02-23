@@ -25,6 +25,11 @@ export default class ImageStore {
         "AWS S3"
     )
 
+    static readonly CLOUDFLARE_R2 = new ImageStore(
+        "CLOUDFLARE_R2",
+        "Cloudflare R2"
+    )
+
     static readonly TENCENTCLOUD_COS = new ImageStore(
         "TENCENTCLOUD_COS",
         "TencentCloud COS"

@@ -15,12 +15,14 @@ import {ImagekitSetting} from "./uploader/imagekit/imagekitUploader";
 import {AwsS3Setting} from "./uploader/s3/awsS3Uploader";
 import {CosSetting} from "./uploader/cos/cosUploader";
 import {KodoSetting} from "./uploader/qiniu/kodoUploader";
+import {R2Setting} from "./uploader/r2/r2Uploader";
 
 export interface PublishSettings {
     imageAltText: boolean;
     replaceOriginalDoc: boolean;
     ignoreProperties: boolean;
     attachmentLocation: string;
+    useRelativePath: boolean;
     imageStore: string;
     //Imgur Anonymous setting
     imgurAnonymousSetting: ImgurAnonymousSetting;
@@ -28,7 +30,8 @@ export interface PublishSettings {
     imagekitSetting: ImagekitSetting;
     awsS3Setting: AwsS3Setting;
     cosSetting: CosSetting;
-    kodoSetting: KodoSetting
+    kodoSetting: KodoSetting;
+    r2Setting: R2Setting;
 }
 
 const DEFAULT_SETTINGS: PublishSettings = {
@@ -36,6 +39,7 @@ const DEFAULT_SETTINGS: PublishSettings = {
     replaceOriginalDoc: false,
     ignoreProperties: true,
     attachmentLocation: ".",
+    useRelativePath: false,
     imageStore: ImageStore.IMGUR.id,
     imgurAnonymousSetting: {clientId: IMGUR_PLUGIN_CLIENT_ID},
     ossSetting: {
@@ -76,6 +80,14 @@ const DEFAULT_SETTINGS: PublishSettings = {
         bucket: "",
         customDomainName: "",
         path: ""
+    },
+    r2Setting: {
+        accessKeyId: "",
+        secretAccessKey: "",
+        accountId: "",
+        bucketName: "",
+        path: "",
+        customDomainName: "",
     },
 };
 export default class ObsidianPublish extends Plugin {
